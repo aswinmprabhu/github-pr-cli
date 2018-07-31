@@ -13,7 +13,7 @@ import (
 
 // rootCmd is the main "ghpr" command
 var rootCmd = &cobra.Command{
-	Use:   "ghpr [OPTIONS]",
+	Use:   "ghpr [OPTIONS] <title>",
 	Short: "GitHub create a PR tool for command line",
 	Run: func(cmd *cobra.Command, args []string) {
 		gitCmd := exec.Command("git", "remote", "-v")
