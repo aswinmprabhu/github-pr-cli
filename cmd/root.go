@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"bytes"
@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"log"
 	"net/http"
-	"net/url"
+	"encoding/json"
 	"os/exec"
 	"strings"
 )
@@ -32,33 +32,36 @@ var rootCmd = &cobra.Command{
 			}
 		}
 		urlStr := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls", strings.Split(repo, "/")[0], strings.Split(repo, "/")[1])
-		data := url.Values{}
-		data.Set("title", args[0])
+		jsonValues := map[string]string{"title": args[0], "base": "master"}
 		var userName string
 		if Remote == "upstream"{
 			for _,line := range gitOutLines{
 				if strings.Contains(line, "origin"){
-					// repo = strings.TrimLeft(strings.TrimRight(line, "."), ":")
 					afterColon := strings.Split(line, ":")[1]
 					userName = strings.Split(afterColon, "/")[0]
 					break
 				}
 			}
 			head := fmt.Sprintf("%s:%s",userName,Branch)
-			data.Set("head", head)
+			jsonValues["head"] = head
 		} else {
-			data.Set("head", Branch)
+			jsonValues["head"] = Branch
 		}
-		data.Set("base", "master")
+		jsonObj, _ := json.Marshal(jsonValues)
 		client := &http.Client{}
-		r, _ := http.NewRequest("POST", urlStr, strings.NewReader(data.Encode())) // URL-encoded payload
+		r, _ := http.NewRequest("POST", urlStr, bytes.NewBuffer(jsonObj)) // URL-encoded payload
 		// Replace xxxxx with the github personal access token
 		r.Header.Add("Authorization", "token xxxxx")
 		r.Header.Add("Content-Type", "application/json")
 
-		resp, _ := client.Do(r)
+		resp, err := client.Do(r)
+		if err != nil {
+			log.Fatal(err)
+		}
+		// defer resp.Body.Close()
 		fmt.Println("Creating a PR.....")
-		if resp.Status == "200 OK" {
+		// fmt.Println(resp.Status)
+		if resp.Status == "201 Created" {
 			fmt.Println("PR created!! :)")
 		} else {
 			fmt.Println("Ooops, something went wrong :(")
