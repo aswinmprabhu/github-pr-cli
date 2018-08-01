@@ -9,7 +9,7 @@ Usage:
   ghpr <title> [flags]
 
 Flags:
-  -b, --branch string   The branch from which to make the PR is to be made (default "master")
+  -b, --branch string   The branch from which the PR is to be made (default "master")
   -h, --help            help for ghpr
   -r, --remote string   Remote GitHub repo to which the PR is to be made (default "upstream")
 ```
