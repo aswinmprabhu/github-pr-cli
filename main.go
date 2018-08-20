@@ -1,7 +1,7 @@
 package main
 
 import (
-	"ghpr/cmd"
+	"github.com/aswinmprabhu/ghpr/cmd"
 )
 
 func main() {
