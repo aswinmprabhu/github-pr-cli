@@ -73,9 +73,6 @@ var rootCmd = &cobra.Command{
 			}
 			// parse the body
 			bodyContent := strings.Split(string(fileContent), "\n\n")[1]
-			if Debug {
-				fmt.Println("Body:", bodyContent)
-			}
 			newPR.Body = bodyContent
 			if err := os.Remove(tmpFile.Name()); err != nil {
 				fmt.Println("Error while deleting the tmp file")
@@ -83,19 +80,14 @@ var rootCmd = &cobra.Command{
 			}
 		}
 		if !inEditor && len(args) == 0 {
-			fmt.Println("PR title required")
-			os.Exit(0)
-		}
-		if Debug {
-			fmt.Println("Remote:", Remote, "Branch:", Branch, "Title:", args[0])
+			log.Fatal("PR title required")
 		}
 		// exec "git remote -v" to get the remotes
 		gitCmd := exec.Command("git", "remote", "-v")
 		var gitOut bytes.Buffer
 		gitCmd.Stdout = &gitOut
 		if err := gitCmd.Run(); err != nil {
-			fmt.Println("Not a git repo")
-			os.Exit(0)
+			log.Fatal("Not a git repo")
 		}
 		var repo string
 		gitOutLines := strings.Split(gitOut.String(), "\n")
@@ -110,8 +102,7 @@ var rootCmd = &cobra.Command{
 			}
 		}
 		if f == 0 {
-			fmt.Println("Remote not found")
-			os.Exit(0)
+			log.Fatal("Remote not found")
 		}
 		urlStr := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls", strings.Split(repo, "/")[0], strings.Split(repo, "/")[1])
 		var userName string
@@ -144,12 +135,14 @@ var rootCmd = &cobra.Command{
 		}
 		// defer resp.Body.Close()
 		fmt.Println("Creating a PR.....")
-		if Debug {
-			bytes, _ := ioutil.ReadAll(resp.Body)
-			fmt.Println(string(bytes))
+		resJson := make(map[string]interface{})
+		bytes, _ := ioutil.ReadAll(resp.Body)
+		if err := json.Unmarshal(bytes, &resJson); err != nil {
+			log.Fatal("Failed to parse the response")
 		}
 		if resp.Status == "201 Created" {
 			fmt.Println("PR created!! :)")
+			fmt.Println(resJson["html_url"])
 		} else {
 			fmt.Println("Ooops, something went wrong :(")
 		}
@@ -159,7 +152,6 @@ var rootCmd = &cobra.Command{
 var Remote string
 var Branch string
 var Token string
-var Debug bool
 var inEditor bool
 
 func init() {
@@ -170,12 +162,8 @@ func init() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	Debug = viper.GetBool("debug")
 	Token = viper.GetString("token")
 	inEditor = viper.GetBool("inEditor")
-	if Debug {
-		fmt.Println("Debug:", Debug, "Token:", Token, "inEditor:", inEditor)
-	}
 	// define flags
 	f := rootCmd.PersistentFlags()
 	f.StringVarP(&Remote, "remote", "r", "upstream", "Remote GitHub repo to which the PR is to be made")
