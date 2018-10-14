@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/aswinmprabhu/github-pr-cli/utils"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -28,7 +30,7 @@ var rootCmd = &cobra.Command{
 	Short: "GitHub create a PR tool for command line",
 	Run: func(cmd *cobra.Command, args []string) {
 		// create a new PR
-		newPR := PR{Title: args[0], Base: "master"}
+		newPR := PR{Title: args[0]}
 		if inEditor {
 			editor := os.Getenv("EDITOR")
 			fmt.Println(editor)
@@ -36,12 +38,12 @@ var rootCmd = &cobra.Command{
 			tmpDir := os.TempDir()
 			tmpFile, tmpFileErr := ioutil.TempFile(tmpDir, "prtitle")
 			if tmpFileErr != nil {
-				fmt.Printf("Error %s while creating tempFile", tmpFileErr)
+				log.Fatalf("Error %s while creating tempFile", tmpFileErr)
 			}
 			// see if the editor exists
 			path, err := exec.LookPath(editor)
 			if err != nil {
-				fmt.Printf("Error %s while looking up for %s\n", path, editor)
+				log.Fatalf("Error %s while looking for %s\n", path, editor)
 			}
 			// write the title to the file as the first line
 			if len(args) != 0 {
@@ -82,43 +84,22 @@ var rootCmd = &cobra.Command{
 		if !inEditor && len(args) == 0 {
 			log.Fatal("PR title required")
 		}
-		// exec "git remote -v" to get the remotes
-		gitCmd := exec.Command("git", "remote", "-v")
-		var gitOut bytes.Buffer
-		gitCmd.Stdout = &gitOut
-		if err := gitCmd.Run(); err != nil {
-			log.Fatal("Not a git repo")
+
+		baseremote, err := utils.ParseRemote(strings.Split(Base, ":")[0])
+		if err != nil {
+			log.Fatal(err)
 		}
-		var repo string
-		gitOutLines := strings.Split(gitOut.String(), "\n")
-		f := 0
-		// parse the repo as username/reponame
-		for _, line := range gitOutLines {
-			if strings.Contains(line, Remote) {
-				afterColon := strings.Split(line, ":")[1]
-				repo = strings.Split(afterColon, ".")[0]
-				f = 1
-				break
-			}
+		urlStr := fmt.Sprintf("https://api.github.com/repos/%s/pulls", baseremote)
+		newPR.Base = strings.Split(Base, ":")[1]
+
+		headremote, err := utils.ParseRemote(strings.Split(Head, ":")[0])
+		if err != nil {
+			log.Fatal(err)
 		}
-		if f == 0 {
-			log.Fatal("Remote not found")
-		}
-		urlStr := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls", strings.Split(repo, "/")[0], strings.Split(repo, "/")[1])
-		var userName string
-		if Remote == "upstream" {
-			for _, line := range gitOutLines {
-				if strings.Contains(line, "origin") {
-					afterColon := strings.Split(line, ":")[1]
-					userName = strings.Split(afterColon, "/")[0]
-					break
-				}
-			}
-			head := fmt.Sprintf("%s:%s", userName, Branch)
-			newPR.Head = head
-		} else {
-			newPR.Head = Branch
-		}
+		userName := strings.Split(headremote, "/")
+		head := fmt.Sprintf("%s:%s", userName, strings.Split(Head, ":")[1])
+		newPR.Head = head
+
 		// marshal the newPR
 		jsonObj, _ := json.Marshal(&newPR)
 		client := &http.Client{}
@@ -149,8 +130,8 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-var Remote string
-var Branch string
+var Base string
+var Head string
 var Token string
 var inEditor bool
 
@@ -164,10 +145,17 @@ func init() {
 	}
 	Token = viper.GetString("token")
 	inEditor = viper.GetBool("inEditor")
+
+	// get the current branch
+	currentBranch, err := utils.CurrentBranch()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// define flags
 	f := rootCmd.PersistentFlags()
-	f.StringVarP(&Remote, "remote", "r", "upstream", "Remote GitHub repo to which the PR is to be made")
-	f.StringVarP(&Branch, "branch", "b", "master", "The branch from which the PR is to be made")
+	f.StringVarP(&Base, "base", "b", "upstream:master", "Repo to which the PR is to be made - remotename:branch ")
+	f.StringVarP(&Head, "head", "h", "origin:"+currentBranch, "Repo in which your changes were made - remotename:branch ")
 }
 
 // Execute executes the command and returns the error
