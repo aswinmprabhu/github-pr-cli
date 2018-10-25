@@ -49,7 +49,7 @@ func openInBrowser(url string) error {
 // rootCmd is the main "ghpr" command
 var rootCmd = &cobra.Command{
 	Use:   "ghpr [options] <title>",
-	Short: "create and search github PRs and issues from the command line",
+	Short: "Create github pull requests from the command line",
 	Run: func(cmd *cobra.Command, args []string) {
 
 		baseremote, err := utils.ParseRemote(strings.Split(base, ":")[0])
@@ -191,7 +191,7 @@ func init() {
 	f := rootCmd.PersistentFlags()
 	f.StringVarP(&base, "base", "B", "upstream:master", "Repo to which the PR is to be made - remotename:branch ")
 	f.StringVarP(&head, "head", "H", "origin:"+currentBranch, "Repo in which your changes lie - remotename:branch ")
-	f.BoolVarP(&inBrowser, "browser", "b", false, "Whether to create in the browser")
+	f.BoolVarP(&inBrowser, "browser", "b", false, "Open PR creation page in the browser")
 
 }
 
