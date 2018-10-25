@@ -48,7 +48,7 @@ func openInBrowser(url string) error {
 
 // rootCmd is the main "ghpr" command
 var rootCmd = &cobra.Command{
-	Use:   "ghpr [options] <title>",
+	Use:   "ghpr <title>",
 	Short: "Create github pull requests from the command line",
 	Run: func(cmd *cobra.Command, args []string) {
 

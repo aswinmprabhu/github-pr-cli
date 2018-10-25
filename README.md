@@ -7,7 +7,7 @@ $ghpr -h
 Create github pull requests from the command line
 
 Usage:
-  ghpr [options] <title> [flags]
+  ghpr <title> [flags]
 
 Flags:
   -B, --base string   Repo to which the PR is to be made - remotename:branch  (default "upstream:master")
