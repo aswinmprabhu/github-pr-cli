@@ -7,6 +7,16 @@ import (
 	"strings"
 )
 
+func parse(line string) string {
+	// check if remote is ssh based
+	if strings.Contains(line, "git@github.com") {
+		stringAfterColon := strings.Split(line, ":")[1]
+		return strings.Split(stringAfterColon, ".")[0]
+	}
+	stringAfterGithubDomain := strings.Split(line, "https://github.com/")[1]
+	return strings.Split(stringAfterGithubDomain, " ")[0]
+}
+
 // ParseRemote parses out a remote as username/reponame from "git remote -v"
 func ParseRemote(remoteName string) (string, error) {
 	// exec "git remote -v" to get the remotes
@@ -21,10 +31,11 @@ func ParseRemote(remoteName string) (string, error) {
 	f := 0
 	// parse the repo as username/reponame
 	for _, line := range gitOutLines {
-		// sample gitOutLines element : git@github.com:aswinmprabhu/github-pr-cli.git
+		// sample gitOutLines elements :
+		// ssh : git@github.com:aswinmprabhu/github-pr-cli.git
+		// https : https://github.com/aswinmprabhu/github-pr-cli
 		if strings.Contains(line, remoteName) {
-			stringAfterColon := strings.Split(line, ":")[1]
-			repo = strings.Split(stringAfterColon, ".")[0]
+			repo = parse(line)
 			f = 1
 			break
 		}

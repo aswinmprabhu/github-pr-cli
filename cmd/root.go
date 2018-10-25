@@ -12,16 +12,38 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/fatih/color"
+
 	"github.com/aswinmprabhu/github-pr-cli/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
+// PR represents the parameters to be passed to the api as json for creating a pull-request
 type PR struct {
 	Title string `json:"title"`
 	Body  string `json:"body"`
 	Head  string `json:"head"`
 	Base  string `json:"base"`
+}
+
+func openInBrowser(url string) error {
+	var err error
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
+	}
+	if err != nil {
+		return fmt.Errorf("Failed to open the browser : %v", err)
+	}
+	fmt.Println("Opening in browser.....")
+	return nil
 }
 
 // rootCmd is the main "ghpr" command
@@ -30,46 +52,34 @@ var rootCmd = &cobra.Command{
 	Short: "create and search github PRs and issues from the command line",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		baseremote, err := utils.ParseRemote(strings.Split(Base, ":")[0])
+		baseremote, err := utils.ParseRemote(strings.Split(base, ":")[0])
 		if err != nil {
 			log.Fatal(err)
 		}
 		urlStr := fmt.Sprintf("https://api.github.com/repos/%s/pulls", baseremote)
 
-		headremote, err := utils.ParseRemote(strings.Split(Head, ":")[0])
+		headremote, err := utils.ParseRemote(strings.Split(head, ":")[0])
 		if err != nil {
 			log.Fatal(err)
 		}
 		userName := strings.Split(headremote, "/")[0]
-		head := fmt.Sprintf("%s:%s", userName, strings.Split(Head, ":")[1])
+		head = fmt.Sprintf("%s:%s", userName, strings.Split(head, ":")[1])
 
 		if inBrowser {
-			fmt.Println(baseremote, head)
-			url := fmt.Sprintf("https://github.com/%s/compare/%s...%s?expand=1", baseremote, strings.Split(Base, ":")[1], head)
-			var err error
-			switch runtime.GOOS {
-			case "linux":
-				err = exec.Command("xdg-open", url).Start()
-			case "windows":
-				err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
-			case "darwin":
-				err = exec.Command("open", url).Start()
-			default:
-				err = fmt.Errorf("unsupported platform")
-			}
+			url := fmt.Sprintf("https://github.com/%s/compare/%s...%s?expand=1", baseremote, strings.Split(base, ":")[1], head)
+			err := openInBrowser(url)
 			if err != nil {
-				log.Fatalf("Failed to open the browser : %v", err)
+				log.Fatal(err)
 			}
 
 		} else {
 			// create a new PR
 			newPR := PR{Title: args[0]}
-			newPR.Base = strings.Split(Base, ":")[1]
+			newPR.Base = strings.Split(base, ":")[1]
 			newPR.Head = head
 
 			if inEditor {
 				editor := os.Getenv("EDITOR")
-				fmt.Println(editor)
 				// create a temp file
 				tmpDir := os.TempDir()
 				tmpFile, tmpFileErr := ioutil.TempFile(tmpDir, "prtitle")
@@ -126,7 +136,7 @@ var rootCmd = &cobra.Command{
 			client := &http.Client{}
 			r, _ := http.NewRequest("POST", urlStr, bytes.NewBuffer(jsonObj)) // URL-encoded payload
 			// set the headers
-			AuthVal := fmt.Sprintf("token %s", Token)
+			AuthVal := fmt.Sprintf("token %s", token)
 			r.Header.Add("Authorization", AuthVal)
 			r.Header.Add("Content-Type", "application/json")
 
@@ -135,27 +145,28 @@ var rootCmd = &cobra.Command{
 			if err != nil {
 				log.Fatal(err)
 			}
-			// defer resp.Body.Close()
+			defer resp.Body.Close()
 			fmt.Println("Creating a PR.....")
-			resJson := make(map[string]interface{})
+			resJSON := make(map[string]interface{})
 			bytes, _ := ioutil.ReadAll(resp.Body)
-			if err := json.Unmarshal(bytes, &resJson); err != nil {
+			if err := json.Unmarshal(bytes, &resJSON); err != nil {
 				log.Fatal("Failed to parse the response")
 			}
 			if resp.Status == "201 Created" {
-				fmt.Println("PR created!! :)")
-				fmt.Println(resJson["html_url"])
+				color.Green("PR created!! :)")
+				color.Blue("%s", resJSON["html_url"])
 			} else {
-				fmt.Println("Ooops, something went wrong :(")
+				color.Red("Ooops, something went wrong :(")
+				color.Red("%s", resJSON["message"])
 			}
 
 		}
 	},
 }
 
-var Base string
-var Head string
-var Token string
+var base string
+var head string
+var token string
 var inEditor bool
 var inBrowser bool
 
@@ -167,7 +178,7 @@ func init() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	Token = viper.GetString("token")
+	token = viper.GetString("token")
 	inEditor = viper.GetBool("inEditor")
 
 	// get the current branch
@@ -178,8 +189,8 @@ func init() {
 
 	// define flags
 	f := rootCmd.PersistentFlags()
-	f.StringVarP(&Base, "base", "B", "upstream:master", "Repo to which the PR is to be made - remotename:branch ")
-	f.StringVarP(&Head, "head", "H", "origin:"+currentBranch, "Repo in which your changes lie - remotename:branch ")
+	f.StringVarP(&base, "base", "B", "upstream:master", "Repo to which the PR is to be made - remotename:branch ")
+	f.StringVarP(&head, "head", "H", "origin:"+currentBranch, "Repo in which your changes lie - remotename:branch ")
 	f.BoolVarP(&inBrowser, "browser", "b", false, "Whether to create in the browser")
 
 }
