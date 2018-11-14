@@ -184,7 +184,7 @@ func init() {
 	// get the current branch
 	currentBranch, err := utils.CurrentBranch()
 	if err != nil {
-		log.Fatal(err)
+		color.Red("Not a git repositiory")
 	}
 
 	// define flags
