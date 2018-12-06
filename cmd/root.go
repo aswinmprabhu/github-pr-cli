@@ -22,6 +22,7 @@ var rootCmd = &cobra.Command{
 	Use:   "ghpr <title>",
 	Short: "Create github pull requests from the command line",
 	Run: func(cmd *cobra.Command, args []string) {
+
 		baseremote, err := parse.Remote(strings.Split(base, ":")[0])
 		if err != nil {
 			color.Red("%v", err)
@@ -38,6 +39,7 @@ var rootCmd = &cobra.Command{
 		head = fmt.Sprintf("%s:%s", userName, strings.Split(head, ":")[1])
 
 		if inBrowser {
+
 			url := fmt.Sprintf("https://github.com/%s/compare/%s...%s?expand=1", baseremote, strings.Split(base, ":")[1], head)
 			err := browser.OpenURLInBrowser(url)
 			if err != nil {
@@ -76,13 +78,16 @@ var rootCmd = &cobra.Command{
 				// parse the body
 				bodyContent := strings.Split(string(editorOutput), "\n\n")[1]
 				newPR.Body = bodyContent
+
 			}
+
 			fmt.Println("Creating a PR.....")
 			resp, err := request.Request(newPR, urlStr, token)
 			if err != nil {
 				color.Red("Failed to create a PR : %v", err)
 				os.Exit(0)
 			}
+
 			resJSON := make(map[string]interface{})
 			bytes, _ := ioutil.ReadAll(resp.Body)
 			if err := json.Unmarshal(bytes, &resJSON); err != nil {
