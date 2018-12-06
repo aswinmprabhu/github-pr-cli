@@ -4,11 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"net/http"
-
-	"github.com/fatih/color"
 )
 
 // PR represents the parameters to be passed to the api as json for creating a pull-request
@@ -20,7 +16,7 @@ type PR struct {
 }
 
 // Request makes a new PR request with the given parameters
-func Request(newPR PR, url string, token string) {
+func Request(newPR PR, url string, token string) (*http.Response, error) {
 	// marshal the newPR
 	jsonObj, _ := json.Marshal(&newPR)
 	client := &http.Client{}
@@ -33,20 +29,8 @@ func Request(newPR PR, url string, token string) {
 	// make the req
 	resp, err := client.Do(r)
 	if err != nil {
-		log.Fatal(err)
+		return new(http.Response), fmt.Errorf("Couldn't make the request : %v", err)
 	}
 	defer resp.Body.Close()
-	fmt.Println("Creating a PR.....")
-	resJSON := make(map[string]interface{})
-	bytes, _ := ioutil.ReadAll(resp.Body)
-	if err := json.Unmarshal(bytes, &resJSON); err != nil {
-		log.Fatal("Failed to parse the response")
-	}
-	if resp.Status == "201 Created" {
-		color.Green("PR created!! :)")
-		color.Blue("%s", resJSON["html_url"])
-	} else {
-		color.Red("Ooops, something went wrong :(")
-		color.Red("%s", resJSON["message"])
-	}
+	return resp, nil
 }

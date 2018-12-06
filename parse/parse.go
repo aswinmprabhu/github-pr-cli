@@ -1,10 +1,10 @@
 package parse
 
 import (
-	"bytes"
 	"fmt"
-	"os/exec"
 	"strings"
+
+	"github.com/aswinmprabhu/github-pr-cli/git"
 )
 
 func parse(line string) string {
@@ -19,15 +19,12 @@ func parse(line string) string {
 
 // Remote parses out a remote as username/reponame from "git remote -v"
 func Remote(remoteName string) (string, error) {
-	// exec "git remote -v" to get the remotes
-	gitCmd := exec.Command("git", "remote", "-v")
-	var gitOut bytes.Buffer
-	gitCmd.Stdout = &gitOut
-	if err := gitCmd.Run(); err != nil {
+	gitOut, err := git.GetRemotes()
+	if err != nil {
 		return "", fmt.Errorf("Couldn't parse the remote : %v", err)
 	}
 	var repo string
-	gitOutLines := strings.Split(gitOut.String(), "\n")
+	gitOutLines := strings.Split(gitOut, "\n")
 	f := 0
 	// parse the repo as username/reponame
 	for _, line := range gitOutLines {
@@ -48,13 +45,10 @@ func Remote(remoteName string) (string, error) {
 
 // CurrentBranch returns the current branch as a string
 func CurrentBranch() (string, error) {
-	// exec "git remote -v" to get the remotes
-	gitCmd := exec.Command("git", "symbolic-ref", "--short", "HEAD")
-	var gitOut bytes.Buffer
-	gitCmd.Stdout = &gitOut
-	if err := gitCmd.Run(); err != nil {
-		return "", fmt.Errorf("Couldn't find the current branch : %v", err)
+	gitOut, err := git.GetCurrentBranch()
+	if err != nil {
+		return "", fmt.Errorf("Couldn't parse the current branch : %v", err)
 	}
-	gitOutLines := strings.Split(gitOut.String(), "\n")
+	gitOutLines := strings.Split(gitOut, "\n")
 	return gitOutLines[0], nil
 }
