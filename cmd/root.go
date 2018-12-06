@@ -1,48 +1,27 @@
 package cmd
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 
+	"github.com/aswinmprabhu/github-pr-cli/browser"
+	"github.com/aswinmprabhu/github-pr-cli/parse"
+	"github.com/aswinmprabhu/github-pr-cli/request"
 	"github.com/fatih/color"
 
-	"github.com/aswinmprabhu/github-pr-cli/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-// PR represents the parameters to be passed to the api as json for creating a pull-request
-type PR struct {
-	Title string `json:"title"`
-	Body  string `json:"body"`
-	Head  string `json:"head"`
-	Base  string `json:"base"`
-}
-
 func openInBrowser(url string) error {
-	var err error
-	switch runtime.GOOS {
-	case "linux":
-		err = exec.Command("xdg-open", url).Start()
-	case "windows":
-		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
-	case "darwin":
-		err = exec.Command("open", url).Start()
-	default:
-		err = fmt.Errorf("unsupported platform")
-	}
+	err := browser.OpenURLInBrowser(url)
 	if err != nil {
-		return fmt.Errorf("Failed to open the browser : %v", err)
+		return err
 	}
-	fmt.Println("Opening in browser.....")
 	return nil
 }
 
@@ -52,13 +31,13 @@ var rootCmd = &cobra.Command{
 	Short: "Create github pull requests from the command line",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		baseremote, err := utils.ParseRemote(strings.Split(base, ":")[0])
+		baseremote, err := parse.Remote(strings.Split(base, ":")[0])
 		if err != nil {
 			log.Fatal(err)
 		}
 		urlStr := fmt.Sprintf("https://api.github.com/repos/%s/pulls", baseremote)
 
-		headremote, err := utils.ParseRemote(strings.Split(head, ":")[0])
+		headremote, err := parse.Remote(strings.Split(head, ":")[0])
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -69,12 +48,12 @@ var rootCmd = &cobra.Command{
 			url := fmt.Sprintf("https://github.com/%s/compare/%s...%s?expand=1", baseremote, strings.Split(base, ":")[1], head)
 			err := openInBrowser(url)
 			if err != nil {
-				log.Fatal(err)
+				log.Fatalf("Failed to open in browser : %+v", err)
 			}
 
 		} else {
 			// create a new PR
-			newPR := PR{Title: args[0]}
+			newPR := request.PR{Title: args[0]}
 			newPR.Base = strings.Split(base, ":")[1]
 			newPR.Head = head
 
@@ -130,35 +109,7 @@ var rootCmd = &cobra.Command{
 			if !inEditor && len(args) == 0 {
 				log.Fatal("PR title required")
 			}
-
-			// marshal the newPR
-			jsonObj, _ := json.Marshal(&newPR)
-			client := &http.Client{}
-			r, _ := http.NewRequest("POST", urlStr, bytes.NewBuffer(jsonObj)) // URL-encoded payload
-			// set the headers
-			AuthVal := fmt.Sprintf("token %s", token)
-			r.Header.Add("Authorization", AuthVal)
-			r.Header.Add("Content-Type", "application/json")
-
-			// make the req
-			resp, err := client.Do(r)
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer resp.Body.Close()
-			fmt.Println("Creating a PR.....")
-			resJSON := make(map[string]interface{})
-			bytes, _ := ioutil.ReadAll(resp.Body)
-			if err := json.Unmarshal(bytes, &resJSON); err != nil {
-				log.Fatal("Failed to parse the response")
-			}
-			if resp.Status == "201 Created" {
-				color.Green("PR created!! :)")
-				color.Blue("%s", resJSON["html_url"])
-			} else {
-				color.Red("Ooops, something went wrong :(")
-				color.Red("%s", resJSON["message"])
-			}
+			request.Request(newPR, urlStr, token)
 
 		}
 	},
@@ -182,7 +133,7 @@ func init() {
 	inEditor = viper.GetBool("inEditor")
 
 	// get the current branch
-	currentBranch, err := utils.CurrentBranch()
+	currentBranch, err := parse.CurrentBranch()
 	if err != nil {
 		color.Red("Not a git repositiory")
 		currentBranch = "currentbranch"

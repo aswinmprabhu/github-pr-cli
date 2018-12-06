@@ -1,4 +1,4 @@
-package utils
+package parse
 
 import (
 	"bytes"
@@ -17,8 +17,8 @@ func parse(line string) string {
 	return strings.Split(stringAfterGithubDomain, " ")[0]
 }
 
-// ParseRemote parses out a remote as username/reponame from "git remote -v"
-func ParseRemote(remoteName string) (string, error) {
+// Remote parses out a remote as username/reponame from "git remote -v"
+func Remote(remoteName string) (string, error) {
 	// exec "git remote -v" to get the remotes
 	gitCmd := exec.Command("git", "remote", "-v")
 	var gitOut bytes.Buffer
