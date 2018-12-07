@@ -141,3 +141,35 @@ func TestRemote(t *testing.T) {
 		})
 	}
 }
+
+func TestCurrentBranch(t *testing.T) {
+	testRepo := setupTestRepo()
+	defer testRepo.TearDown()
+	newBranchName := "httpsUpstream"
+	if err := exec.Command("git", "checkout", "-b", newBranchName).Run(); err != nil {
+		panic(fmt.Errorf("Error creating new branch : %v", err))
+	}
+	tests := []struct {
+		name    string
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "New branch test",
+			want:    newBranchName,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := CurrentBranch()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CurrentBranch() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("CurrentBranch() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
