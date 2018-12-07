@@ -16,6 +16,14 @@ Flags:
   -h, --help          help for ghpr
 ```
 
+# Example
+```
+$git commit -am "testcommitmsg"
+$git push origin testbranch
+$ghpr -H origin:testbranch -b
+Opening in browser....
+```
+
 # Usage
 
 1. Create a config file in the home directory
