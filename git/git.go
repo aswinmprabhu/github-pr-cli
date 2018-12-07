@@ -8,27 +8,14 @@ import (
 	"os/exec"
 )
 
-// GetRemotes returns the output of "git remote -v"
-func GetRemotes() (string, error) {
+// GetGitOutput returns the output of "git remote -v"
+func GetGitOutput(args ...string) (string, error) {
 	// exec "git remote -v" to get the remotes
-	gitCmd := exec.Command("git", "remote", "-v")
+	gitCmd := exec.Command("git", args...)
 	var gitOut bytes.Buffer
 	gitCmd.Stdout = &gitOut
 	if err := gitCmd.Run(); err != nil {
 		return "", fmt.Errorf("Couldn't get the remotes : %v", err)
 	}
 	return gitOut.String(), nil
-}
-
-// GetCurrentBranch returns the output of "git symbolic-ref --short HEAD"
-func GetCurrentBranch() (string, error) {
-	// exec "git remote -v" to get the remotes
-	gitCmd := exec.Command("git", "symbolic-ref", "--short", "HEAD")
-	var gitOut bytes.Buffer
-	gitCmd.Stdout = &gitOut
-	if err := gitCmd.Run(); err != nil {
-		return "", fmt.Errorf("Couldn't get the branch : %v", err)
-	}
-	return gitOut.String(), nil
-
 }

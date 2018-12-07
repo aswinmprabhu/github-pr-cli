@@ -19,7 +19,7 @@ func parse(line string) string {
 
 // Remote parses out a remote as username/reponame from "git remote -v"
 func Remote(remoteName string) (string, error) {
-	gitOut, err := git.GetRemotes()
+	gitOut, err := git.GetGitOutput("remote", "-v")
 	if err != nil {
 		return "", fmt.Errorf("Couldn't parse the remote : %v", err)
 	}
@@ -45,7 +45,7 @@ func Remote(remoteName string) (string, error) {
 
 // CurrentBranch returns the current branch as a string
 func CurrentBranch() (string, error) {
-	gitOut, err := git.GetCurrentBranch()
+	gitOut, err := git.GetGitOutput("symbolic-ref", "--short", "HEAD")
 	if err != nil {
 		return "", fmt.Errorf("Couldn't parse the current branch : %v", err)
 	}
