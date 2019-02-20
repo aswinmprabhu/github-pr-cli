@@ -1,6 +1,6 @@
 # github-pr-cli
 
-A simple command line utility build using Golang to create GitHub PRs from the comfort of your terminal
+A simple command line utility built using Golang to create GitHub PRs from the comfort of your terminal. Never again fumble through your browser to open a new PR, breaking the flow of your commandline workflow.
 
 ```
 $ghpr -h
